@@ -49,7 +49,7 @@ export default class GameBoard extends React.Component{
     componentDidMount(){
         const app = new PIXI.Application({
             backgroundColor: 0x008000,
-            width: window.innerWidth,
+            width: window.innerWidth * 0.8,
             height: window.innerHeight * 0.8,
             sharedLoader: true,
             sharedTicker: true,
@@ -64,21 +64,27 @@ export default class GameBoard extends React.Component{
     }
 
     onBlur(){
-        console.log("on blur")
+        // console.log("on blur")
     }
 
 
 
     onMouseUp(){
-        console.log("Mouse up")
+        // console.log("Mouse up")
     }
 
     onWheel(){
-        console.log("Wheel scroll")
+        // console.log("Wheel scroll")
     }
 
     onShow(){
-        console.log("On show")
+        // console.log("On show")
+    }
+
+    mouseOverCallback(key){
+        if(this.state.startPoint){
+
+        }
     }
 
     clickCallback(x,y){
@@ -92,8 +98,8 @@ export default class GameBoard extends React.Component{
         }
     }
 
-    astar(){
-        if(this.state.startPoint && this.state.endPoint){
+    astar(startPoint=this.state.startPoint,endPoint=this.state.endPoint){
+        if(startPoint && endPoint){
             const board = this.state.board
             const startPoint = board[this.state.startPoint]
             startPoint.parent = ''
@@ -107,7 +113,6 @@ export default class GameBoard extends React.Component{
             var lastPoint = startPoint
             let finished = false
             let neighbor,newestPoint,dist,bestPoint
-            console.log('start',startPoint,'end',endPoint)
             while(!finished){
                 for(let n = 0;n<6;n++){
                     if(!lastPoint.paths[n])
@@ -117,20 +122,16 @@ export default class GameBoard extends React.Component{
                         newestPoint.parent = lastPoint
                         dist = distanceFormula(endPoint.xCoord,newestPoint.xCoord,endPoint.yCoord,newestPoint.yCoord)
                         newestPoint.cashCost = lastPoint.cashCost + newestPoint.cost + lastPoint.rivers[n]
-                        newestPoint.moveCost = lastPoint.moveCost + 1
+                        if(lastPoint.rivers[n]){
+                            console.log("There's a river between",lastPoint.key,'and',newestPoint.key)
+                        }
+                        newestPoint.moveCost = 0
+                        //  lastPoint.moveCost + 1
                         newestPoint.heuristic = newestPoint.cashCost + newestPoint.moveCost + dist + lastPoint.heuristic
                         openList.push(newestPoint)
                         openListObj[neighbor] = 1
                         
-                        if(dist === 0 ){
-                            closedList.push(newestPoint)
-                            finished = true
-                            break
-                        }
                     }
-                }
-                if(dist ===0){
-                    break
                 }
             bestPoint = openList[0]
             openList.forEach((point)=>{
@@ -141,26 +142,18 @@ export default class GameBoard extends React.Component{
             lastPoint = bestPoint
             closedList.push(bestPoint)
             openList = openList.filter(function(e){ return e.key !== bestPoint.key})
-            console.log("At the end of this round, open list is:",openList,'closed list is',closedList)
+            if(bestPoint.key === endPoint.key){
+                break
+            }
             }
 
-            console.log("Sweet, I exited! Closed list is",closedList)
             this.setState({startPoint:'',endPoint:''})
             let finalClosedList = [endPoint]
-            
-            var colorArray = [0xFF6633, 0xFFB399, 0xFF33FF, 0xFFFF99, 0x00B3E6, 
-            0xE6B333, 0x3366E6, 0x999966, 0x99FF99, 0xB34D4D,
-            0x80B300, 0x809900, 0xE6B3B3, 0x6680B3, 0x66991A, 
-            0xFF99E6, 0xCCFF1A, 0xFF1A66, 0xE6331A, 0x33FFCC,
-            0x66994D, 0xB366CC, 0x4D8000, 0xB33300, 0xCC80CC, 
-            0x66664D, 0x991AFF, 0xE666FF, 0x4DB3FF, 0x1AB399,
-            0xE666B3, 0x33991A, 0xCC9999, 0xB3B31A, 0x00E680, 
-            0x4D8066, 0x809980, 0xE6FF80, 0x1AFF33, 0x999933,
-            0xFF3380, 0xCCCC00, 0x66E64D, 0x4D80CC, 0x9900B3, 
-            0xE64D66, 0x4DB380, 0xFF4D4D, 0x99E6E6, 0x6666FF]
+            console.log("The final cash cost is",endPoint.cashCost)
+            var colorArray = [0x000000F]
             let colorIndex = Math.floor(Math.random() * colorArray.length)
             const color = colorArray[colorIndex]
-            console.log("Color index",colorIndex,"color",color)
+            // console.log("Color index",colorIndex,"color",color)
             let p = endPoint
             while (1){
                 if(p.parent){
@@ -170,8 +163,10 @@ export default class GameBoard extends React.Component{
                     break
                 }
             }
-            // console.log('start',startPoint.key,'end',endPoint.key)
-            // console.log('closed list',closedList,'final closed list',finalClosedList)
+            
+            console.log('closed list',closedList,'final closed list',finalClosedList)
+            startPoint.toggleSelected()
+            endPoint.toggleSelected()
             this.drawPath(finalClosedList,color)
         }
     }
@@ -186,20 +181,19 @@ export default class GameBoard extends React.Component{
             line.lineTo(p.xCoord,p.yCoord)
         }
         this.boardContainer.addChild(line)
-
     }
 
     createMap(){
-        const xSpacing = 2*17
+        const xSpacing = Math.floor(Math.sqrt(3)*17)
         const ySpacing = 17
-        const xRange = 200
-        const yRange = 100
+        const xRange = window.innerWidth * 0.8/xSpacing
+        const yRange = window.innerHeight* 0.8/ySpacing
         var boardContainer = new PIXI.Container()
         boardContainer.x = 0
         boardContainer.y = 0
         boardContainer.width = xRange * xSpacing
         boardContainer.height = yRange * ySpacing
-
+        console.log('x range',xRange)
         // For posterity: Spacing is kinda weird in the coordinate plane. If I were 100% geometrically accurate,
         // x spacing would be a factor of 2 times the squart root of three, and y spacing would be a factor of the square root of 3. 
         // I'm not entirely accurate, and that's just fine. 
@@ -214,18 +208,97 @@ export default class GameBoard extends React.Component{
                 yCoord = y*ySpacing
                 key = xCoord + ',' + yCoord
                 if(Math.floor(Math.random()*3)){
-                    newMilePost = new Milepost(xCoord,yCoord,xSpacing,this.clickCallback.bind(this))
+                    newMilePost = new Milepost(xCoord,yCoord,xSpacing,ySpacing,this.clickCallback.bind(this))
                 }else{
-                    newMilePost = new Mountain(xCoord,yCoord,xSpacing,this.clickCallback.bind(this))
+                    newMilePost = new Mountain(xCoord,yCoord,xSpacing,ySpacing,this.clickCallback.bind(this))
                 }
                 newMilePost.initialize()
                 boardContainer.addChild(newMilePost.graphics)
                 board[key] = newMilePost            
             }
         }
-        this.setState({board})
-        this.boardContainer = boardContainer
-        this.app.stage.addChild(boardContainer)
+        this.setState({board},()=>{
+            this.boardContainer = boardContainer
+            this.app.stage.addChild(boardContainer)
+            let rivers = this.createRivers()
+            this.drawRivers(rivers)
+        })
     }
 
+    createRivers(){
+        // console.log('create Rivers')
+        const board = this.state.board
+        let keys = Object.keys(board)
+        let rivers = []
+        let river = []
+        let randomKey = keys[Math.floor(Math.random() * keys.length)]
+        // console.log('board',board,'keys',keys,'random key',randomKey)
+        let randomPoint = board[randomKey]
+        let [randomNeighbor,randomNumber] = this.getRandomNeighbor(randomPoint)
+        randomNeighbor = board[randomNeighbor]
+        let riverPoint = {
+            xCoord: (randomPoint.xCoord + randomNeighbor.xCoord)/2,
+            yCoord: (randomPoint.yCoord + randomNeighbor.yCoord)/2
+        }
+        river.push(riverPoint)
+        randomPoint.rivers[randomNumber] = 100
+        randomNumber = randomNumber + 3 < 5?randomNumber + 3: randomNumber - 3
+        randomNeighbor.rivers[randomNumber] = 100
+        randomPoint = randomNeighbor
+        let superDumbExtraVariable
+        for(let n = 0;n<10;n++){
+            superDumbExtraVariable = this.getRandomNeighbor(randomPoint,randomNumber)
+            randomNeighbor = superDumbExtraVariable[0]
+            randomNumber = superDumbExtraVariable[1]
+            randomNeighbor = this.state.board[randomNeighbor]
+            riverPoint = {
+                xCoord: (randomPoint.xCoord + randomNeighbor.xCoord)/2,
+                yCoord: (randomPoint.yCoord + randomNeighbor.yCoord)/2
+            }
+            river.push(riverPoint)
+            randomPoint.rivers[randomNumber] = 100
+            randomNumber = randomNumber + 3 < 5?randomNumber + 3: randomNumber - 3
+            randomNeighbor.rivers[randomNumber] = 100
+            randomPoint = randomNeighbor
+        }
+        this.setState({board})
+        rivers.push(river)
+        return(rivers)
+    }
+
+    getRandomNeighbor(randomPoint,previousRandomNumber=Math.floor(Math.random()*5)){
+        let randomNumber = Math.floor(Math.random()*2)
+        if(randomNumber){
+            if(this.state.board[randomPoint.neighbors[previousRandomNumber+1]]){
+                randomNumber = previousRandomNumber + 1
+            }else{
+                randomNumber = previousRandomNumber - 1
+            }
+        }else{
+            if(this.state.board[randomPoint.neighbors[previousRandomNumber-1]]){
+                randomNumber= previousRandomNumber - 1
+            }else{
+                randomNumber = previousRandomNumber + 1
+            }
+        }
+        
+        let randomNeighbor = randomPoint.neighbors[randomNumber]
+        return [randomNeighbor,randomNumber]
+
+    }
+
+    drawRivers(rivers){
+        console.log("Draw rivers",rivers)
+        let line = new PIXI.Graphics
+        let river
+        line.lineStyle(2,0xADD8E6,1)
+        for (let n=0;n<rivers.length;n++){
+            river = rivers[n]
+            line.moveTo(river[0].xCoord,river[0].yCoord)
+            for(let i = 1;i<river.length;i++){
+                line.lineTo(river[i].xCoord,river[i].yCoord)
+            }
+        }
+        this.boardContainer.addChild(line)
+    }
 }
